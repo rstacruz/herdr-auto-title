@@ -100,6 +100,11 @@ cannot express it:
   user has, and doing that twice a second for the life of a pane costs more than
   every other read in the loop. A failed search is therefore left alone for
   `locateRetry` (10 s).
+
+  oh-my-pi needs none of that. OMP rewrites the session's title in a fixed-width
+  slot at the head of the file, so a poll reads those bytes every time instead
+  of resuming from an offset, and nothing about the session is kept between
+  polls at all (`internal/omp/title.go`).
 - **What Auto Title last named each tab** (`internal/state/manual.go`), which is
   how a rename by the user is told from the plugin's own work. That is a design
   of its own: [manual rename protection](./manual-rename-protection.md).

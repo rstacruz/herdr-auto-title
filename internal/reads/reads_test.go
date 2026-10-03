@@ -641,6 +641,69 @@ func TestAPaneWhoseAgentHoldsNoSessionKeepsItsBranch(t *testing.T) {
 	}
 }
 
+// ompPaneAt is a pane holding an oh-my-pi session written to path. Herdr
+// carries a title derived from the user's first prompt for such a pane, which
+// is what these tests watch being replaced by the session's own title.
+func ompPaneAt(paneID, dir, path string) *state.PaneState {
+	return state.PaneFrom(herdr.PaneInfo{
+		PaneID: paneID, TabID: "wE:t1", CWD: dir, Agent: "omp",
+		Title: "this supports claude code's naming based on session",
+		AgentSession: &herdr.AgentSessionInfo{
+			Agent: "omp", Kind: herdr.SessionRefPath, Value: path,
+		},
+	}, time.Time{})
+}
+
+func TestAnOhMyPiPaneIsNamedFromItsSessionsOwnTitle(t *testing.T) {
+	t.Parallel()
+
+	const title = "Add OMP session naming support"
+
+	pane := ompPaneAt("wE:p1", t.TempDir(), readstest.OMPSession(t, t.TempDir(), title))
+
+	readOne(transcriptOptions(), pane)
+
+	if pane.AgentTitle != title {
+		t.Errorf("agent title = %q, want the session's own title %q", pane.AgentTitle, title)
+	}
+}
+
+func TestAnOhMyPiPaneKeepsItsOwnTitleWhenTheSessionSaysNothing(t *testing.T) {
+	t.Parallel()
+
+	// A session not yet named and one whose file is gone both leave the title
+	// the snapshot carried, which is what the pane would have been named from.
+	const want = "this supports claude code's naming based on session"
+
+	for name, path := range map[string]string{
+		"not named yet": readstest.OMPSession(t, t.TempDir(), ""),
+		"gone":          filepath.Join(t.TempDir(), "session.jsonl"),
+	} {
+		pane := ompPaneAt("wE:p1", t.TempDir(), path)
+		readOne(transcriptOptions(), pane)
+
+		if pane.AgentTitle != want {
+			t.Errorf("%s: agent title = %q, want %q", name, pane.AgentTitle, want)
+		}
+	}
+}
+
+func TestAnOhMyPiSessionIsLeftUnreadWhenTranscriptsAreOff(t *testing.T) {
+	t.Parallel()
+
+	pane := ompPaneAt(
+		"wE:p1",
+		t.TempDir(),
+		readstest.OMPSession(t, t.TempDir(), "Add OMP session naming support"),
+	)
+
+	readOne(branchOptions(), pane)
+
+	if want := "this supports claude code's naming based on session"; pane.AgentTitle != want {
+		t.Errorf("agent title = %q, want the pane's own %q", pane.AgentTitle, want)
+	}
+}
+
 func TestOneRepositorySpelledTwoWaysDoesNotFollowTheAgent(t *testing.T) {
 	t.Parallel()
 

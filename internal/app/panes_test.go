@@ -364,6 +364,23 @@ func agentPaneInfo(paneID, sessionID, dir string, focused bool) herdr.PaneInfo {
 	}
 }
 
+// ompPaneInfo is a pane holding an oh-my-pi session, which Herdr reports as the
+// path of the file it is written to rather than an id. The title Herdr carries
+// for such a pane is derived from what the user first asked, and its terminal
+// title is the session's own name wrapped in OMP's marker and spinner.
+func ompPaneInfo(paneID, path, dir string, focused bool) herdr.PaneInfo {
+	return herdr.PaneInfo{
+		PaneID: paneID, TabID: "wE:t1", CWD: dir, Focused: focused,
+		TerminalTitleStripped: "π ⠏ Add OMP session naming support",
+		Title:                 "this supports claude code's naming based on session",
+		Agent:                 "omp",
+		AgentStatus:           "idle",
+		AgentSession: &herdr.AgentSessionInfo{
+			Agent: "omp", Kind: herdr.SessionRefPath, Value: path,
+		},
+	}
+}
+
 func TestOnlyOnePaneOfATabCarriesTheBranchTheTabShows(t *testing.T) {
 	t.Parallel()
 

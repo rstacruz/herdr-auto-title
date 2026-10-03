@@ -29,7 +29,8 @@ type PaneState struct {
 
 	// Agent is the agent Herdr recognized, empty when there is none.
 	// AgentTitle is what it says it is working on, which many agents leave
-	// empty and report through the terminal title instead.
+	// empty and report through the terminal title instead. A read fills it
+	// for an agent that publishes a title in a file of its own, oh-my-pi.
 	Agent        string
 	DisplayAgent string
 	AgentTitle   string
@@ -39,8 +40,8 @@ type PaneState struct {
 	// hook is installed — see docs/architecture/title-resolution.md.
 	AgentTopic string
 	// AgentSession names the conversation that agent holds, which is how the
-	// transcript behind AgentTopic is found. Nil until the agent's integration
-	// reports one.
+	// session behind AgentTitle and AgentTopic is found. Nil until the agent's
+	// integration reports one.
 	AgentSession *herdr.AgentSessionInfo
 
 	// Processes are the pane's foreground process and its descendants.

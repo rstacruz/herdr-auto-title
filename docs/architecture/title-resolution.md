@@ -99,6 +99,16 @@ the pane rather than against a list — and reappears as a *kind*, so a tab read
 `dashboard › claude › Implement OAuth scopes` after. That name can be [turned
 off](#the-agents-name-is-optional).
 
+Nothing installs a reporter for that field, but a sidebar plugin may be one:
+the report seen in practice derives the title from the user's **first prompt**,
+which says what was asked rather than what the session is about. oh-my-pi keeps
+the session's own title in its session file instead, and that is what a read
+fills the agent's title with (`internal/omp/title.go`), so a tab reads
+`dashboard › omp › Add OMP session naming support` where the snapshot alone
+would say `dashboard › omp › this supports claude code's naming`. A session that
+has not been named yet leaves the snapshot's title standing. How the file is
+read is under [the session transcript](#the-session-transcript).
+
 ### Terminal title
 
 The richest source in practice, and the one that carries most agent context. Its
@@ -152,17 +162,35 @@ a caveat block written by the tool; either would name a tab after the plumbing.
 The transcript marks what the user typed with `origin.kind: "human"`, and only
 those lines are read.
 
-Three costs are worth stating plainly:
+Claude Code is not the only agent whose session is read. Herdr reports an
+oh-my-pi session as the **path of the file it is written to** rather than an id
+— OMP files a session under a directory named after the working tree and a
+timestamp, so an id alone would not find it — and that file opens with a
+fixed-width title slot: one JSON line of exactly 256 bytes. OMP rewrites the
+title there in place, so the reader takes the head of the file every time
+instead of resuming from an offset (`internal/omp/title.go`): nothing is
+remembered between polls, and a rename between two of them is on the tab by the
+next. Only a file that is still there and still opens with a slot answers — one
+that is gone, not yet named, or written before OMP carried the slot leaves the
+title the snapshot carried standing. The read is bounded at the slot: the rest
+of the session, what the user said to the agent included, is never read.
+
+The costs are worth stating plainly:
 
 - **It reads what the user said to their agent.** That is why it can be turned
-  off with `HERDR_AUTO_TITLE_TRANSCRIPT=false`, and why nothing else in the
-  plugin reads a file it was not pointed at.
-- **The format is undocumented.** `ai-title` and `origin.kind` are Claude Code's
-  internals and can change in any release. A transcript that no longer carries
-  them yields nothing and the source declines — the failure mode is the tab
-  named as it was before this existed, not a wrong name.
-- **The session id becomes part of a path.** It arrives over the socket, so it
-  is refused unless it is shaped like a UUID rather than cleaned.
+  off with `HERDR_AUTO_TITLE_TRANSCRIPT=false`, which drops oh-my-pi's title
+  with Claude Code's transcript, and why nothing else in the plugin reads a file
+  it was not pointed at.
+- **The formats are undocumented.** `ai-title` and `origin.kind` are Claude
+  Code's internals, the slot is oh-my-pi's, and either can change in any
+  release. A session file that no longer carries them yields nothing and the
+  source declines — the failure mode is the tab named as it was before this
+  existed, not a wrong name.
+- **A session id becomes part of a path; a session path arrives whole.** The id
+  is refused unless it is shaped like a UUID rather than cleaned. The path is
+  read where it says it is — Herdr refuses one that is not absolute before a
+  snapshot ever carries it — and the reader's own answer to a file that is not a
+  session is that it says nothing.
 
 ### Foreground process
 

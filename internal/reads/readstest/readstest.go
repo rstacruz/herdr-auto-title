@@ -1,5 +1,6 @@
 // Package readstest lays down on disk what a pane read goes to: repositories,
-// their worktrees, and the Claude Code transcripts that say where an agent is.
+// their worktrees, and the session files that say what the agent in a pane is
+// about — Claude Code's transcripts and oh-my-pi's title slot.
 package readstest
 
 import (
@@ -76,6 +77,41 @@ func Transcript(t *testing.T, home, sessionID string, lines ...string) {
 
 	mkdir(t, filepath.Dir(path))
 	write(t, path, strings.Join(lines, "\n")+"\n")
+}
+
+// OMPSession lays down one oh-my-pi session file under dir and returns its
+// path, which is how Herdr reports such a session: the file itself, not an id.
+// The title is what the session calls itself, and a nameless session is "".
+func OMPSession(t *testing.T, dir, title string) string {
+	t.Helper()
+
+	path := filepath.Join(
+		dir,
+		"2026-10-03T13-26-27-431Z_01a101f1-d167-75c3-b35c-132f7037bb6f.jsonl",
+	)
+
+	mkdir(t, dir)
+	write(t, path, slot(t, title)+`{"type":"session","version":3,"cwd":"/work"}`+"\n")
+
+	return path
+}
+
+// slot is a title slot as OMP serializes it: one JSON line of exactly 256 bytes
+// with its newline, the pad field taking up the slack. That exactness is what
+// lets OMP rewrite a title in place, and it is why a reader of it can never
+// trust an offset into the file.
+func slot(t *testing.T, title string) string {
+	t.Helper()
+
+	line := `{"type":"title","v":1,"title":` + strconv.Quote(title) +
+		`,"source":"auto","updatedAt":"2026-10-03T13:26:58.541Z","pad":"`
+
+	pad := 256 - len(line) - len(`"}`) - 1
+	if pad < 0 {
+		t.Fatalf("the title %q does not fit in a slot", title)
+	}
+
+	return line + strings.Repeat(" ", pad) + `"}` + "\n"
 }
 
 // AgentIn is a transcript line saying where the agent is working. Only the

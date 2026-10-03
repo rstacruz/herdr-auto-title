@@ -10,6 +10,7 @@ import (
 	"github.com/kryptamine/herdr-auto-title/internal/claude"
 	"github.com/kryptamine/herdr-auto-title/internal/git"
 	"github.com/kryptamine/herdr-auto-title/internal/herdr"
+	"github.com/kryptamine/herdr-auto-title/internal/omp"
 	"github.com/kryptamine/herdr-auto-title/internal/state"
 )
 
@@ -19,7 +20,9 @@ type Options struct {
 	// ClaudeDirs are the Claude Code configuration homes transcripts are found in.
 	ClaudeDirs []string
 	// BranchMax of zero or less turns branches off, and then no checkout is read.
-	BranchMax       int
+	BranchMax int
+	// ReadTranscripts allows reading what an agent's own session says: Claude
+	// Code's transcript and the title an oh-my-pi session gives itself.
 	ReadTranscripts bool
 }
 
@@ -92,8 +95,16 @@ func (p *Poll) Fill(ctx context.Context, pane *state.PaneState) {
 
 	// The transcript is read before the checkout because it says where the
 	// agent is working, and that is where the branch is read from.
-	topic := p.reader.topic(ctx, pane, dir)
+	topic := p.reader.claudeTopic(ctx, pane, dir)
 	pane.AgentTopic = topic.Text()
+
+	// The title an oh-my-pi session gives itself replaces whatever the
+	// snapshot carried, which for such a pane is derived from the user's first
+	// prompt; a session not yet named leaves the snapshot's title standing.
+	if title := p.reader.ompTitle(ctx, pane); title != "" {
+		pane.AgentTitle = title
+	}
+
 	pane.Git = p.checkout(ctx, dir)
 	pane.AgentGit = p.checkout(ctx, topic.Dir)
 	pane.AgentDir = topic.Dir
@@ -154,10 +165,11 @@ func (p *Poll) checkout(ctx context.Context, dir string) git.Checkout {
 	return checkout
 }
 
-// topic reports what the session the pane's agent is holding says it is about,
-// and where that agent is working. Only Claude Code's transcripts are
-// understood, and only Herdr's integration hook says which session a pane holds.
-func (r *Reader) topic(ctx context.Context, pane *state.PaneState, dir string) claude.Topic {
+// claudeTopic reports what the session the pane's Claude Code agent is holding
+// says it is about, and where that agent is working. Only Claude Code's
+// transcripts are understood, and only Herdr's integration hook says which
+// session a pane holds.
+func (r *Reader) claudeTopic(ctx context.Context, pane *state.PaneState, dir string) claude.Topic {
 	if !r.readTranscripts || spent(ctx) {
 		return claude.Topic{}
 	}
@@ -168,6 +180,22 @@ func (r *Reader) topic(ctx context.Context, pane *state.PaneState, dir string) c
 	}
 
 	return r.topics.Topic(sessionID, dir)
+}
+
+// ompTitle reports the title the pane's oh-my-pi session gives itself. OMP
+// publishes it in its session file rather than over the socket, and the title
+// the snapshot carries for such a pane is derived from the user's first prompt.
+func (r *Reader) ompTitle(ctx context.Context, pane *state.PaneState) string {
+	if !r.readTranscripts || spent(ctx) {
+		return ""
+	}
+
+	path, ok := pane.AgentSession.PathFor(omp.Agent)
+	if !ok {
+		return ""
+	}
+
+	return omp.Title(path)
 }
 
 // spent reports that the poll is past its deadline. The reads it guards go to

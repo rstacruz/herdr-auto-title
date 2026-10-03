@@ -1310,6 +1310,26 @@ func TestTranscriptsAreLeftUnreadWhenTurnedOff(t *testing.T) {
 	}
 }
 
+func TestATabIsNamedFromAnOhMyPiSessionsOwnTitle(t *testing.T) {
+	t.Parallel()
+
+	// What Herdr carries for such a pane says what the user first asked; the
+	// session's own title says what it is about instead, and OMP's marker and
+	// spinner in the terminal title are no part of a tab's name.
+	path := readstest.OMPSession(t, stateDir(t), "Add OMP session naming support")
+
+	h := startConfigured(t, herdrtest.New(
+		[]herdr.TabInfo{{TabID: "wE:t1", Label: "1"}},
+		[]herdr.PaneInfo{ompPaneInfo("wE:p1", path, dashboard, true)},
+	), transcriptConfig())
+	h.poll()
+
+	got := h.client.Renames()[0].Label
+	if want := "dashboard › omp › Add OMP session naming support"; got != want {
+		t.Errorf("rename = %q, want %q", got, want)
+	}
+}
+
 func TestRunNamesWhatExistsBeforeTheFirstTick(t *testing.T) {
 	t.Parallel()
 

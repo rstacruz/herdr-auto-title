@@ -208,7 +208,14 @@ are only the facts that would otherwise mislead the code in silence.
   verbatim, but the tab bar renders one row and Herdr exposes no height setting.
 - **`PaneInfo.title` is the agent's own title, and is null in practice.** Claude
   Code reports its topic through `terminal_title_stripped` instead, and
-  `agent_session` stays null until that agent's integration is installed.
+  `agent_session` stays null until that agent's integration is installed. A
+  sidebar plugin can report a title there — the one seen in practice derives it
+  from the user's first prompt, which says what was asked rather than what the
+  session is about.
+- **An oh-my-pi session arrives as a path, not an id.** Herdr answers
+  `kind: "path"` with the session file, and its first 256 bytes are a fixed-width
+  title slot OMP rewrites in place, so a reader that resumed from an offset
+  would never see a rename. Read the head of the file every time.
 - **A plugin the server starts inherits the server's environment**, not the
   shell of whoever installed it, which is why `HERDR_AUTO_TITLE_*` settings
   arrive through `config.env` (see

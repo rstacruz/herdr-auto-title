@@ -316,7 +316,10 @@ reads, so this section describes Herdr rather than those types.
   it null for every Claude Code pane observed; that agent reports its topic
   through `terminal_title_stripped` instead. This is why most agent context
   reaches a title one rung below the agent source — see
-  [title resolution](./title-resolution.md).
+  [title resolution](./title-resolution.md). A third party can report one with
+  `pane.report_metadata`; the report seen in practice derives it from the user's
+  first prompt, and Auto Title reads oh-my-pi's own session title from its
+  session file rather than trusting it.
 - **`PaneInfo.agent_session` says which conversation the pane's agent holds**,
   and it is null until an agent's integration reports one.
   `herdr integration install <agent>` installs the hook that does — Herdr ships
@@ -327,12 +330,18 @@ reads, so this section describes Herdr rather than those types.
   both were reported, so a reader that wants the file finds it by id. Auto Title
   reads it from the snapshot — no extra request — and what it does with it is in
   [title resolution](./title-resolution.md).
+- **pi and oh-my-pi report a session by path instead**, answering
+  `kind: "path"` with the session file itself: neither files its sessions under
+  a name an id alone would find, and Herdr prefers the path they report over an
+  id. The file is the one `herdr integration install omp` last saw the session
+  write to — reported through `pane.report_agent_session`, and read for the
+  title slot OMP keeps at its head (see
+  [title resolution](./title-resolution.md)).
 - **`pane.report_metadata` is how anything outside Herdr sets `PaneInfo.title`.**
   Probed directly: `herdr pane report-metadata <pane> --source X --title T` put
   `T` in the snapshot's `title` and a tab bearing it appeared within one poll;
-  `--clear-title` undid it. Nothing installs a source for it today, which is why
-  `title` is null in practice. It also carries `--display-agent`,
-  `--state-label`, `--token` and a `--ttl-ms`.
+  `--clear-title` undid it. Herdr installs no source of its own for it. It also
+  carries `--display-agent`, `--state-label`, `--token` and a `--ttl-ms`.
 - **A workspace object carries** `workspace_id`, `number`, `label`, `focused`,
   `pane_count`, `tab_count`, `active_tab_id` and `agent_status`, plus `tokens`
   only while metadata is reported on it and `worktree` for a workspace in a git
